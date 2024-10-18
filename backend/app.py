@@ -10,7 +10,6 @@ from flask_uploads import UploadSet, configure_uploads, IMAGES
 import os, jwt
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
 load_dotenv()
 
 app = Flask(__name__)
@@ -32,35 +31,6 @@ keycloak_openid = KeycloakOpenID(
     # verify=True
 )
 
-# keycloak_admin = KeycloakAdmin(
-#     server_url=os.getenv('KEYCLOAK_SERVER_URL'),
-#     realm_name=os.getenv('KEYCLOAK_REALM_NAME'),
-#     client_id=os.getenv('KEYCLOAK_CLIENT_ID'),
-#     client_secret_key=os.getenv('KEYCLOAK_CLIENT_SECRET'),
-#     username=os.getenv('KEYCLOAK_ADMIN_USERNAME'),
-#     password=os.getenv('KEYCLOAK_ADMIN_PASSWORD')
-#     # verify=True
-# )
-
-# keycloak_admin = KeycloakAdmin(
-#     server_url=os.getenv('KEYCLOAK_SERVER_URL'),
-#     # realm_name=os.getenv('KEYCLOAK_REALM_NAME'),
-#     realm_name='master',
-#     username=os.getenv('KEYCLOAK_ADMIN_USERNAME'),
-#     password=os.getenv('KEYCLOAK_ADMIN_PASSWORD'),
-#     verify=False
-# )
-
-
-# keycloak_admin = KeycloakAdmin(
-#     server_url=os.getenv('KEYCLOAK_SERVER_URL'),
-#     username=os.getenv('KEYCLOAK_ADMIN_USERNAME'),
-#     password=os.getenv('KEYCLOAK_ADMIN_PASSWORD'),
-#     realm_name=os.getenv('KEYCLOAK_REALM_NAME'),  # This is 'todo-app'
-#     user_realm_name='master',  # Admin user is in the 'master' realm
-#     verify=False
-# )
-
 def get_keycloak_admin():
     """Create a fresh Keycloak admin client with each request."""
     keycloak_admin = KeycloakAdmin(
@@ -71,7 +41,7 @@ def get_keycloak_admin():
         user_realm_name='master',
         verify=False
     )
-    keycloak_admin.refresh_token()  # Refresh token on every call
+    keycloak_admin.refresh_token() 
     return keycloak_admin
 
 
@@ -79,7 +49,6 @@ public_key = keycloak_openid.public_key()
 print(f"Public Key: {public_key}")
 
 
-# Ensure 'static/uploads' directory exists
 if not os.path.exists('static/uploads'):
     os.makedirs('static/uploads')
 
@@ -97,33 +66,6 @@ def get_token_auth_header():
     token = parts[1]
     return token
 
-# def keycloak_protect(function):
-#     def wrapper(*args, **kwargs):
-#         token = get_token_auth_header()
-#         if token is None:
-#             return jsonify({"message": "Unauthorized"}), 401
-#         try:
-#             # Decode token without verification to inspect contents
-#             unverified_token = jwt.decode(token, options={"verify_signature": False}, algorithms=["RS256"])
-#             print("Unverified Token Info:", unverified_token)  # Debugging
-
-#             # Proceed with proper verification
-#             public_key = keycloak_openid.public_key()
-#             public_key_pem = "-----BEGIN PUBLIC KEY-----\n{}\n-----END PUBLIC KEY-----".format(public_key)
-#             token_info = keycloak_openid.decode_token(
-#                 token,
-#                 key=public_key_pem,
-#                 options={"verify_signature": True, "verify_aud": False, "verify_exp": True}
-#             )
-#             request.user = token_info
-#             print("Decoded Token Info:", token_info)  # Debugging
-#         except Exception as e:
-#             print("Token decoding error:", e)  # Debugging
-#             return jsonify({"message": "Invalid token"}), 401
-#         return function(*args, **kwargs)
-#     wrapper.__name__ = function.__name__
-#     return wrapper
-
 
 def keycloak_protect(function):
     def wrapper(*args, **kwargs):
@@ -131,7 +73,6 @@ def keycloak_protect(function):
         if token is None:
             return jsonify({"message": "Unauthorized"}), 401
         try:
-            # Proceed with proper verification
             public_key = keycloak_openid.public_key()
             public_key_pem = "-----BEGIN PUBLIC KEY-----\n{}\n-----END PUBLIC KEY-----".format(public_key)
             token_info = keycloak_openid.decode_token(
@@ -140,10 +81,8 @@ def keycloak_protect(function):
                 options={"verify_signature": True, "verify_aud": False, "verify_exp": True}
             )
             request.user = token_info
-            # Optionally, remove debugging prints in production
-            # print("Decoded Token Info:", token_info)
         except Exception as e:
-            print("Token decoding error:", e)  # For debugging purposes
+            # print("Token decoding error:", e) 
             return jsonify({"message": "Invalid token"}), 401
         return function(*args, **kwargs)
     wrapper.__name__ = function.__name__
@@ -160,7 +99,7 @@ app.add_url_rule(
             get_context=lambda: {'session': db_session, 'user': request.user}
         )
     ),
-    methods=['GET', 'POST']  # Move methods parameter here
+    methods=['GET', 'POST']  
 )
 
 
@@ -184,7 +123,7 @@ def upload_image():
 def create_checkout_session():
     try:
         # Fetch username from Keycloak token (from request.user)
-        customer_username = request.user.get('preferred_username')  # Fetch directly from the token
+        customer_username = request.user.get('preferred_username') 
         
         if not customer_username:
             return jsonify({"error": "Username not found in token"}), 400
@@ -192,13 +131,13 @@ def create_checkout_session():
         checkout_session = stripe.checkout.Session.create(
             payment_method_types=['card'],
             line_items=[{
-                'price': os.getenv('STRIPE_PRICE_ID'),  # Use environment variable
+                'price': os.getenv('STRIPE_PRICE_ID'),  
                 'quantity': 1,
             }],
             mode='payment',
-            customer_email=request.user.get('email'),  # Fetch the email from the token
-            metadata={'username': customer_username},  # Automatically add username to metadata
-            billing_address_collection='required',  # Add this line
+            customer_email=request.user.get('email'),  
+            metadata={'username': customer_username},  
+            billing_address_collection='required',  
             success_url='http://localhost:3000/success',
             cancel_url='http://localhost:3000/cancel',
         )
@@ -208,7 +147,7 @@ def create_checkout_session():
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    keycloak_admin = get_keycloak_admin()  # Use fresh Keycloak client instance
+    keycloak_admin = get_keycloak_admin()  
     payload = request.get_data(as_text=True)
     sig_header = request.headers.get('Stripe-Signature')
 
@@ -230,17 +169,14 @@ def webhook():
 
         if customer_username:
             try:
-                # Fetch user ID directly by username
                 user_id = keycloak_admin.get_user_id(customer_username)
-                print(f"Fetched User ID for username {customer_username}: {user_id}")
+                # print(f"Fetched User ID for username {customer_username}: {user_id}")
 
-                # Get 'pro_user' realm role
                 pro_role = keycloak_admin.get_realm_role('pro_user')
-                print(f"Fetched 'pro_user' role: {pro_role}")
+                # print(f"Fetched 'pro_user' role: {pro_role}")
 
-                # Assign the 'pro_user' role to the user
                 keycloak_admin.assign_realm_roles(user_id = user_id, client_id =os.getenv('KEYCLOAK_CLIENT_ID'), roles=[pro_role])
-                print(f"Assigned 'pro_user' role to user with username {customer_username}")
+                # print(f"Assigned 'pro_user' role to user with username {customer_username}")
             except Exception as e:
                 print(f"Error assigning role to user with username {customer_username}: {e}")
         else:
