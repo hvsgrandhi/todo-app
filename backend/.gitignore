@@ -1,0 +1,9 @@
+# Ignore Python cache files
+__pycache__/
+*.py[cod]
+
+# Ignore environment variables file
+.env
+todo.db
+# Ignore any other files or folders you want
+
