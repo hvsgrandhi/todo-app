@@ -7,7 +7,7 @@ import { ReactKeycloakProvider } from '@react-keycloak/web';
 const root = ReactDOM.createRoot(document.getElementById('root'));
 const keycloakInitOptions = {
   onLoad: 'login-required',
-  checkLoginIframe: false, // Add this line
+  checkLoginIframe: false, 
 };
 root.render(
   <ReactKeycloakProvider authClient={keycloak} initOptions={keycloakInitOptions}>

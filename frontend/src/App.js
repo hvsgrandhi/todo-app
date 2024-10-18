@@ -1,4 +1,3 @@
-// src/App.js
 import React from 'react';
 import { useKeycloak } from '@react-keycloak/web';
 import { ApolloProvider } from '@apollo/client';

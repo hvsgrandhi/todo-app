@@ -1,4 +1,3 @@
-// src/ProfileMenu.js
 import React, { useState } from 'react';
 import { useKeycloak } from '@react-keycloak/web';
 import {

@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { useQuery, useMutation, gql } from '@apollo/client';
-import { useKeycloak } from '@react-keycloak/web';
-import ProfileMenu from './ProfileMenu';
-import UpgradeToPro from './UpgradeToPro';
+import React, { useState } from "react";
+import { useQuery, useMutation, gql } from "@apollo/client";
+import { useKeycloak } from "@react-keycloak/web";
+import ProfileMenu from "./ProfileMenu";
+import UpgradeToPro from "./UpgradeToPro";
 import {
   Container,
   TextField,
@@ -12,9 +12,11 @@ import {
   CardContent,
   CardActions,
   Grid,
-} from '@mui/material';
-import { format } from 'date-fns-tz';
-
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  Zoom,
+} from "@mui/material";
 
 const GET_TODOS = gql`
   query {
@@ -33,7 +35,11 @@ const GET_TODOS = gql`
 `;
 
 const CREATE_TODO = gql`
-  mutation CreateToDoItem($title: String!, $description: String, $imageUrl: String) {
+  mutation CreateToDoItem(
+    $title: String!
+    $description: String
+    $imageUrl: String
+  ) {
     createTodo(title: $title, description: $description, imageUrl: $imageUrl) {
       todo {
         id
@@ -47,8 +53,18 @@ const CREATE_TODO = gql`
 `;
 
 const UPDATE_TODO = gql`
-  mutation UpdateToDoItem($id: ID!, $title: String, $description: String, $imageUrl: String) {
-    updateTodo(id: $id, title: $title, description: $description, imageUrl: $imageUrl) {
+  mutation UpdateToDoItem(
+    $id: ID!
+    $title: String
+    $description: String
+    $imageUrl: String
+  ) {
+    updateTodo(
+      id: $id
+      title: $title
+      description: $description
+      imageUrl: $imageUrl
+    ) {
       todo {
         id
         title
@@ -75,12 +91,15 @@ function ToDoList() {
   const [updateTodo] = useMutation(UPDATE_TODO);
   const [deleteTodo] = useMutation(DELETE_TODO);
 
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [image, setImage] = useState(null);
   const [editingId, setEditingId] = useState(null);
 
-  const isProUser = keycloak.hasRealmRole('pro_user');
+  const [open, setOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+
+  const isProUser = keycloak.hasRealmRole("pro_user");
 
   if (loading) return <p>Loading To-Dos...</p>;
   if (error) return <p>Error loading To-Dos: {error.message}</p>;
@@ -92,28 +111,25 @@ function ToDoList() {
 
     if (image && isProUser) {
       const formData = new FormData();
-      formData.append('image', image);
-    
-      const response = await fetch('http://localhost:5000/upload-image', {
-        method: 'POST',
+      formData.append("image", image);
+
+      const response = await fetch("http://localhost:5000/upload-image", {
+        method: "POST",
         headers: {
           Authorization: `Bearer ${keycloak.token}`,
         },
         body: formData,
       });
-    
+
       const result = await response.json();
-    
+
       if (response.ok) {
-        // Ensure the full image URL is used, including the Flask backend URL
         imageUrl = `http://localhost:5000${result.image_url}`;
-        console.log(imageUrl)
       } else {
         console.error(result.message);
         return;
       }
     }
-    
 
     if (editingId) {
       await updateTodo({
@@ -126,8 +142,8 @@ function ToDoList() {
       });
     }
 
-    setTitle('');
-    setDescription('');
+    setTitle("");
+    setDescription("");
     setImage(null);
     refetch();
   };
@@ -145,10 +161,26 @@ function ToDoList() {
     refetch();
   };
 
+  const handleImageClick = (imageUrl) => {
+    setSelectedImage(imageUrl);
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+    setSelectedImage(null);
+  };
 
   return (
     <Container maxWidth="md">
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '20px 0' }}>
+      <header
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          margin: "20px 0",
+        }}
+      >
         <Typography variant="h4">Your To-Do List</Typography>
         <ProfileMenu />
       </header>
@@ -187,16 +219,19 @@ function ToDoList() {
                   onChange={(e) => setImage(e.target.files[0])}
                 />
               </Button>
-              {image && <span style={{ marginLeft: '10px' }}>{image.name}</span>}
+              {image && (
+                <span style={{ marginLeft: "10px" }}>{image.name}</span>
+              )}
             </Grid>
           )}
           <Grid item xs={12}>
             <Button type="submit" variant="contained" color="primary">
-              {editingId ? 'Update To-Do' : 'Add To-Do'}
+              {editingId ? "Update To-Do" : "Add To-Do"}
             </Button>
           </Grid>
         </Grid>
       </form>
+
       <Grid container spacing={2}>
         {data.allTodos.edges.map(({ node }) => (
           <Grid item xs={12} key={node.id}>
@@ -205,21 +240,46 @@ function ToDoList() {
                 <Typography variant="h5">{node.title}</Typography>
                 <Typography variant="body1">{node.description}</Typography>
                 {node.imageUrl && (
-                  <img src={node.imageUrl} alt="To-Do" style={{ maxWidth: '20%', marginTop: '10px' }} />
+                  <img
+                    src={node.imageUrl}
+                    alt="To-Do"
+                    style={{
+                      maxWidth: "20%",
+                      marginTop: "10px",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => handleImageClick(node.imageUrl)}
+                  />
                 )}
-                {console.log(node.imageUrl)}
 
+                {/* Display the correct time adjusted for the local timezone */}
                 <Typography variant="caption" color="textSecondary">
-                  {format(new Date(node.time), 'dd MMM yyyy HH:mm:ss', {
-                    timeZone: 'Asia/Kolkata',
+                  {new Date(node.time).toLocaleString("en-IN", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                    hour12: false, // Use 24-hour time
+                    timeZone: "Asia/Kolkata", // Set the timezone to match your locale
                   })}
                 </Typography>
               </CardContent>
+
               <CardActions>
-                <Button size="small" onClick={() => handleEdit(node)}>
+                <Button
+                  onClick={() => handleEdit(node)}
+                  variant="contained"
+                  color="secondary"
+                >
                   Edit
                 </Button>
-                <Button size="small" color="secondary" onClick={() => handleDelete(node.id)}>
+                <Button
+                  onClick={() => handleDelete(node.id)}
+                  variant="contained"
+                  color="error"
+                >
                   Delete
                 </Button>
               </CardActions>
@@ -227,6 +287,29 @@ function ToDoList() {
           </Grid>
         ))}
       </Grid>
+
+      {/* Modal for Image Viewing */}
+      <Dialog
+        open={open}
+        TransitionComponent={Zoom}
+        onClose={handleClose}
+        maxWidth="lg"
+      >
+        <DialogTitle>
+          <Button onClick={handleClose} variant="contained" color="secondary">
+            Close
+          </Button>
+        </DialogTitle>
+        <DialogContent>
+          {selectedImage && (
+            <img
+              src={selectedImage}
+              alt="Enlarged To-Do"
+              style={{ maxWidth: "100%", maxHeight: "80vh" }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </Container>
   );
 }

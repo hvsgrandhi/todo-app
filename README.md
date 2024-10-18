@@ -26,11 +26,8 @@ This project is a ToDo application with authentication and authorization using *
   - [Create a Stripe Account](#create-a-stripe-account)
   - [Obtain API Keys](#obtain-api-keys)
   - [Create a Product and Price](#create-a-product-and-price)
+  - [Set Up Webhook Endpoint](#set-up-webhook-endpoint)
 - [Running the Application](#running-the-application)
-- [Deploying with Docker (Optional)](#deploying-with-docker-optional)
-- [Uploading to GitHub](#uploading-to-github)
-- [License](#license)
-
 ---
 
 ## Features
@@ -186,5 +183,94 @@ Sign up at Stripe and log in to the Dashboard and make sure to enable **Test Mod
 ### Create a Product and Price
 
 #### Create a Product
-- Go to Products > Add Product
+- Click on Product Catalog on Left sidebar and create product 
 - Name it Pro_Todo *(any name)*
+- Select one-off
+- Enter random Amount in INR
+- Click Add Product
+- Copy the Price ID and paste it into your **backend .env** file ```(STRIPE_PRICE_ID)```
+
+
+### Set Up Webhook Endpoint
+
+[Download Stripe CLI](https://github.com/stripe/stripe-cli/releases/download/v1.21.9/stripe_1.21.9_windows_x86_64.zip)
+
+
+- Start Stripe CLI to Forward Events:
+ ```bash
+stripe login
+stripe listen --forward-to localhost:5000/webhook
+```
+- Copy the Webhook Signing Secret:
+
+```bash
+After running the above command, you'll see a webhook signing secret. Copy it and paste it into your backend .env file (STRIPE_ENDPOINT_SECRET).
+```
+
+## Backend Setup(Continue)
+
+### Run the Backend Server
+ ```bash
+ python app.py
+```
+
+## Frontend Setup
+ ```bash
+ cd ../frontend
+```
+
+### Install Dependencies
+
+```bash
+npm install
+```
+### Environment Variables
+
+Create a .env file in the frontend directory with the following content:
+
+```bash
+# .env (frontend)
+REACT_APP_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
+REACT_APP_KEYCLOAK_URL=http://localhost:8080/
+REACT_APP_KEYCLOAK_REALM=todo-app
+REACT_APP_KEYCLOAK_CLIENT_ID=todo-frontend
+GENERATE_SOURCEMAP=false
+```
+
+### Run the Frontend Server
+
+```bash
+npm start
+```
+
+## Running the Application
+
+Ensure all servers are running:
+
+- **Keycloak: Via Docker (docker-compose up -d) at port 8080**
+- **Backend: python app.py at port 5000**
+- **Frontend: npm start in the frontend directory at port 3000**
+- **Stripe CLI: stripe listen --forward-to localhost:5000/webhook**
+
+### Access the Application
+
+Open ```http://localhost:3000``` in your browser.
+
+#### Register a New User:
+Click on Register and create a new account.
+
+#### Test Standard User Features:
+Add, update, and delete ToDo items without images.
+
+#### Upgrade to Pro User:
+- Click on Upgrade to Pro
+- Complete the payment using test card details:
+  - Card Number: 4242 4242 4242 4242
+  - Expiry Date: Any future date
+  - CVC: Any 3-digit number
+  - Address: Any Indian address Required *(due to Indian regulations)*
+
+#### Test Pro User Features
+- After successfull payment, you will be redirected to main page.
+- You should now see options to upload images with your ToDo items.
+

@@ -1,4 +1,3 @@
-// src/UpgradeToPro.js
 import React from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { useKeycloak } from '@react-keycloak/web';
@@ -46,7 +45,12 @@ function UpgradeToPro() {
   }
 
   return (
-    <Button variant="contained" color="secondary" onClick={handleUpgrade}>
+    <Button 
+      variant="contained" 
+      color="secondary" 
+      onClick={handleUpgrade} 
+      style={{ marginBottom: '20px' }}
+    >
       Upgrade to Pro
     </Button>
   );
